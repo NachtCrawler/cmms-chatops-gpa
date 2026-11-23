@@ -104,6 +104,41 @@ bot.command('kpi', async (ctx) => {
         await ctx.reply('⚠️ Hubo un error al calcular los KPIs.');
     }
 });
+// Escuchar mensajes de texto libres para buscar en Yokoten (Debe ir antes de bot.launch)
+bot.on('text', async (ctx, next) => {
+    const mensaje = ctx.message.text;
+
+    // Si el mensaje empieza con '/', lo ignoramos (es un comando)
+    if (mensaje.startsWith('/')) return next();
+
+    try {
+        const connection = await mysql.createConnection({
+            host: process.env.DB_HOST,
+            port: process.env.DB_PORT,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        });
+
+        // Buscamos si el texto coincide con el código o la descripción
+        const [rows] = await connection.query(
+            'SELECT codigo_alarma, solucion_poka_yoke FROM catalogo_yokoten WHERE codigo_alarma LIKE ? OR descripcion LIKE ?',
+            [`%${mensaje}%`, `%${mensaje}%`]
+        );
+        await connection.end();
+
+        if (rows.length > 0) {
+            const solucion = rows[0];
+            await ctx.reply(`💡 *Solución Yokoten Encontrada (Código: ${solucion.codigo_alarma})*\n\n${solucion.solucion_poka_yoke}`, { parse_mode: 'Markdown' });
+        } else {
+            await ctx.reply('🤔 No encontré ese código de error en la base de conocimiento Yokoten. Puedes abrir un ticket con /fail para que un ingeniero lo revise.');
+        }
+
+    } catch (error) {
+        console.error(error);
+        await ctx.reply('⚠️ Hubo un error al buscar en Yokoten.');
+    }
+});
 // Iniciar el bot
 bot.launch().then(() => {
     console.log('🤖 Bot de Telegram iniciado y escuchando mensajes...');
