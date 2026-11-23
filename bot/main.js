@@ -1,12 +1,12 @@
 const { Telegraf, Scenes, session } = require('telegraf');
 const mysql = require('mysql2/promise');
-const { ticketWizard } = require('./handlers/tickets'); // Importamos el ticket
+const { ticketWizard, fixWizard } = require('./handlers/tickets'); // Importamos el ticket
 require('dotenv').config();
 
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 
 // 1. Configurar el manejo de Escenas
-const stage = new Scenes.Stage([ticketWizard]);
+const stage = new Scenes.Stage([ticketWizard, fixWizard]);
 bot.use(session());
 bot.use(stage.middleware());
 
@@ -51,6 +51,11 @@ bot.start((ctx) => {
 bot.command('fail', (ctx) => {
     ctx.scene.enter('TICKET_WIZARD');
 });
+// Comando /fix (Ahora llama a la escena)
+bot.command('fix', (ctx) => {
+    ctx.scene.enter('FIX_WIZARD');
+});
+
 // Comando /kpi (Cálculo de indicadores en tiempo real)
 bot.command('kpi', async (ctx) => {
     try {
