@@ -1,0 +1,15 @@
+services:
+  cmms-db:
+    image: mariadb:latest
+    container_name: cmms_gpa_db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: root_password_seguro
+      MARIADB_DATABASE: cmms_chatops
+      MARIADB_USER: admin_gpa
+      MARIADB_PASSWORD: password_gpa
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql

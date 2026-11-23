@@ -1,0 +1,5 @@
+# Variables de entorno y configuraciones locales 
+node_modules/
+.env
+data/
+*.log
