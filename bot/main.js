@@ -51,7 +51,54 @@ bot.start((ctx) => {
 bot.command('fail', (ctx) => {
     ctx.scene.enter('TICKET_WIZARD');
 });
+// Comando /kpi (Cálculo de indicadores en tiempo real)
+bot.command('kpi', async (ctx) => {
+    try {
+        const connection = await mysql.createConnection({
+            host: process.env.DB_HOST,
+            port: process.env.DB_PORT,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        });
 
+        // 1. Calcular MTTR
+        const [mttrData] = await connection.query(`
+            SELECT 
+                COUNT(id_ticket) AS total_cerrados,
+                ROUND(AVG(TIMESTAMPDIFF(SECOND, fecha_apertura, fecha_cierre) / 3600), 2) AS mttr_horas
+            FROM tickets
+            WHERE estatus = 'Cerrado'
+        `);
+
+        // 2. Contar tickets abiertos
+        const [abiertosData] = await connection.query('SELECT COUNT(id_ticket) AS abiertos FROM tickets WHERE estatus = "Abierto"');
+
+        await connection.end();
+
+        const totalCerrados = mttrData[0].total_cerrados;
+        const mttrHoras = mttrData[0].mttr_horas || 0; 
+        const abiertos = abiertosData[0].abiertos;
+
+        // Formatear el mensaje
+        let mensaje = `📊 *Tablero de Control CMMS (KPIs)*\n\n`;
+        mensaje += `🟢 Tickets Cerrados: ${totalCerrados}\n`;
+        mensaje += `🟡 Tickets Abiertos: ${abiertos}\n\n`;
+        
+        if (totalCerrados > 0) {
+            mensaje += `⏱️ *MTTR Actual:* ${mttrHoras} horas\n`;
+            mensaje += `_Promedio calculado sobre los tickets cerrados._`;
+        } else {
+            mensaje += `⏱️ *MTTR Actual:* No hay datos suficientes (cierra un ticket con /fix).\n`;
+        }
+
+        await ctx.replyWithMarkdown(mensaje);
+
+    } catch (error) {
+        console.error(error);
+        await ctx.reply('⚠️ Hubo un error al calcular los KPIs.');
+    }
+});
 // Iniciar el bot
 bot.launch().then(() => {
     console.log('🤖 Bot de Telegram iniciado y escuchando mensajes...');
